@@ -77,3 +77,5 @@ sudo certbot --nginx --non-interactive --agree-tos --register-unsafely-without-e
 ```
 
 证书由服务器现有 Certbot 定时器续期。具体上线检查结果记录在 `docs/DEPLOYMENT_STATUS.md`。
+
+初次部署额外安装 `furniture-https.timer`：每 5 分钟检查解析，解析正确后自动签发并启用 HTTPS，成功后自动关闭此初次部署定时器。证书申请失败时至少间隔一小时才重试。可以手动执行 `sudo /usr/local/sbin/furniture-enable-https` 立即检查；它不会在 DNS 不匹配时申请证书。

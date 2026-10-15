@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -euo pipefail
+[[ $EUID -eq 0 ]] || exit 1
+domain=furniture.zhenpinfa.cn
+expected_ip=139.199.89.115
+if [[ -f "/etc/letsencrypt/live/$domain/fullchain.pem" ]] && nginx -T 2>/dev/null | grep -q "ssl_certificate /etc/letsencrypt/live/$domain/fullchain.pem"; then
+  systemctl disable --now furniture-https.timer
+  exit 0
+fi
+if ! getent ahostsv4 "$domain" | awk '{print $1}' | sort -u | grep -Fxq "$expected_ip"; then
+  echo "Waiting for public DNS: $domain must point to $expected_ip"
+  exit 0
+fi
+# Avoid repeatedly asking the certificate authority when validation is failing.
+state=/var/lib/3d-furniture-tls
+install -d -m 700 "$state"
+now=$(date +%s)
+if [[ -f "$state/last-attempt" ]]; then
+  last=$(cat "$state/last-attempt")
+  [[ "$last" =~ ^[0-9]+$ ]] || exit 1
+  if (( now - last < 3600 )); then exit 0; fi
+fi
+printf '%s\n' "$now" > "$state/last-attempt"
+certbot --nginx --non-interactive --agree-tos --register-unsafely-without-email --redirect -d "$domain"
+nginx -t
+systemctl reload nginx
+systemctl disable --now furniture-https.timer
+echo "HTTPS enabled: https://$domain"

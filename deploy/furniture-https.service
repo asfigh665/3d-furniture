@@ -1,0 +1,9 @@
+[Unit]
+Description=Enable furniture HTTPS when public DNS is ready
+After=network-online.target nginx.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/furniture-enable-https
+TimeoutStartSec=180

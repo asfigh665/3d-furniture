@@ -48,6 +48,9 @@ ENV
 fi
 install -m 644 "$release/deploy/furniture.service" /etc/systemd/system/furniture.service
 install -m 755 "$release/deploy/furniture-set-api-key" /usr/local/sbin/furniture-set-api-key
+install -m 755 "$release/deploy/furniture-enable-https" /usr/local/sbin/furniture-enable-https
+install -m 644 "$release/deploy/furniture-https.service" /etc/systemd/system/furniture-https.service
+install -m 644 "$release/deploy/furniture-https.timer" /etc/systemd/system/furniture-https.timer
 ln -sfn "$release" "$base/current"
 if [[ ! -e /etc/nginx/sites-available/furniture.conf ]]; then
   install -m 644 "$release/deploy/furniture.nginx.conf" /etc/nginx/sites-available/furniture.conf
@@ -56,6 +59,7 @@ ln -sfn /etc/nginx/sites-available/furniture.conf /etc/nginx/sites-enabled/furni
 nginx -t
 systemctl daemon-reload
 systemctl enable furniture
+systemctl enable --now furniture-https.timer
 systemctl restart furniture
 systemctl reload nginx
 for attempt in {1..20}; do
