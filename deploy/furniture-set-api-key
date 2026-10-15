@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ $EUID -ne 0 ]]; then
+  echo 'Run with sudo: sudo /usr/local/sbin/furniture-set-api-key' >&2
+  exit 1
+fi
+if [[ ! -t 0 ]]; then
+  echo 'An interactive terminal is required; connect with ssh -t.' >&2
+  exit 1
+fi
+read -r -s -p 'DeepSeek API Key (hidden): ' furniture_api_key
+printf '\n'
+if [[ ! "$furniture_api_key" =~ ^[A-Za-z0-9_-]{10,256}$ ]]; then
+  echo 'Key format is invalid. Existing configuration was not changed.' >&2
+  exit 1
+fi
+furniture_env=/etc/3d-furniture/furniture.env
+furniture_tmp=$(mktemp /etc/3d-furniture/furniture.env.XXXXXX)
+trap 'rm -f -- "$furniture_tmp"; unset furniture_api_key' EXIT
+if [[ -f "$furniture_env" ]]; then
+  grep -vE '^(AI_API_KEY|AI_MODEL|AI_BASE_URL|AI_THINKING)=' "$furniture_env" > "$furniture_tmp" || true
+fi
+printf 'AI_API_KEY=%s\nAI_MODEL=deepseek-flash\nAI_BASE_URL=https://api.deepseek.com\nAI_THINKING=disabled\n' "$furniture_api_key" >> "$furniture_tmp"
+chmod 600 "$furniture_tmp"
+chown root:root "$furniture_tmp"
+mv -f -- "$furniture_tmp" "$furniture_env"
+unset furniture_api_key
+systemctl restart furniture
+for furniture_attempt in {1..20}; do
+  if curl --silent --fail http://127.0.0.1:8787/api/health; then
+    printf '\nConfiguration saved. Model credentials require a real chat request to verify.\n'
+    exit 0
+  fi
+  sleep 1
+done
+echo 'Service did not become ready. Check: sudo journalctl -u furniture -n 40 --no-pager' >&2
+exit 1

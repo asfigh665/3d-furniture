@@ -1,0 +1,27 @@
+[Unit]
+Description=FORM furniture design studio
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=furniture
+Group=furniture
+WorkingDirectory=/opt/3d-furniture/current
+Environment=NODE_ENV=production
+EnvironmentFile=/etc/3d-furniture/furniture.env
+ExecStart=/opt/3d-furniture/runtime/node/bin/node server/index.js
+Restart=on-failure
+RestartSec=3
+StateDirectory=3d-furniture
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/3d-furniture
+MemoryMax=512M
+TasksMax=128
+
+[Install]
+WantedBy=multi-user.target
